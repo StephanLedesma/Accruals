@@ -19,12 +19,10 @@ class AccrualsProcessor:
         self.jwt = self.get_auth_token()
 
     def get_encoded_credentials(self) -> str:
-        """Encodes API credentials in base64."""
         credentials = f"{self.API_KEY}:{self.CLIENT_SECRET}"
         return base64.b64encode(credentials.encode()).decode()
 
     def get_auth_token(self) -> str:
-        """Requests an authentication token from the API."""
         headers = {
             "Content-Type": "application/x-www-form-urlencoded",
             "Authorization": "Basic " + self.encoded_credentials
@@ -43,7 +41,6 @@ class AccrualsProcessor:
             raise Exception("Failed to retrieve authentication token")
 
     def fetch_data(self, date: str) -> pd.DataFrame:
-        """Fetches data from the API for the given date."""
         params = {
             'fromDate': date,
             'summaryDetail': 'S',
@@ -70,13 +67,11 @@ class AccrualsProcessor:
             raise Exception(f"Failed to retrieve data for {date} (Status code: {response.status_code})")
 
     def save_data_to_excel(self, df: pd.DataFrame, date: str):
-        """Saves the DataFrame to an Excel file."""
         output_path = f"C:\\Users\\stephan.ledesma\\Scripts\\Acrruals\\output\\NT_ACCRUALS_{date}.csv"
         df.to_csv(output_path, index=False)
         print(f"Raw data for {date} saved to {output_path}")
 
     def insert_data_into_snowflake(self, df: pd.DataFrame, formatted_date: str):
-        """Inserts the DataFrame into Snowflake."""
         try:
             tp.snow.insert(df, 'TR_TEST', 'NT', 'ACCRUELS', username='SLEDESMA', warehouse='COMPUTE_WH')
             print(f"Successfully inserted data for {formatted_date} into Snowflake.")
@@ -84,7 +79,6 @@ class AccrualsProcessor:
             print(f"Error inserting data into Snowflake for {formatted_date}: {e}")
 
     def log_error_to_excel(self):
-        """Logs failed dates and error codes to an Excel file."""
         if self.errors:
             error_df = pd.DataFrame(self.errors, columns=["Date", "Error"])
             error_df.to_csv(self.OUTPUT_ERROR_FILE, index=False)
