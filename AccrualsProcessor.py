@@ -3,14 +3,19 @@ from datetime import datetime, timedelta
 import pandas as pd
 import requests
 import triumpy as tp
+import os
+from dotenv import load_dotenv
 
 class AccrualsProcessor:
-    BASE_PATH = r"C:\Users\stephan.ledesma\Scripts\Acrruals\Logs"
-    API_KEY = "l7b32a64bb76ff4f2882f9398ff1c11cf8"
-    CLIENT_SECRET = "24bd2f3fb6bc4653906700e8a53fc33f"
-    AUTH_URL = "https://apiservices.ntrs.com/auth/oauth/v2/token"
-    DATA_URL = "https://apiservices.ntrs.com/ent/fundaccounting/v1/transactions"
-    OUTPUT_ERROR_FILE = r"C:\Users\stephan.ledesma\Scripts\Acrruals\Error_Log.csv"
+    load_dotenv()
+
+    BASE_PATH = os.getenv("BASE_PATH")
+    API_KEY = os.getenv("API_KEY")
+    CLIENT_SECRET = os.getenv("CLIENT_SECRET")
+    AUTH_URL = os.getenv("AUTH_URL")
+    DATA_URL = os.getenv("DATA_URL")
+    OUTPUT_ERROR_FILE = os.getenv("OUTPUT_ERROR_FILE")
+
 
     def __init__(self):
         self.current_date = datetime.today() - timedelta(days=1)
