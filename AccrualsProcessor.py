@@ -5,6 +5,16 @@ import requests
 import triumpy as tp
 import os
 from dotenv import load_dotenv
+import logging
+
+
+logging.basicConfig(
+    filename=r"C:\Users\stephan.ledesma\Scripts\Acrruals\fees_log.log", 
+    level=logging.INFO,  
+    format="%(asctime)s - %(levelname)s - %(message)s",
+)
+
+logger = logging.getLogger()
 
 class AccrualsProcessor:
     load_dotenv()
@@ -34,15 +44,15 @@ class AccrualsProcessor:
         }
         data = {"grant_type": "client_credentials"}
 
-        print("Requesting authentication token...")
+        logger.info("Requesting authentication token...")
         response = requests.post(self.AUTH_URL, headers=headers, data=data)
 
         if response.status_code == 200:
-            print("Authentication successful.")
+            logger.info("Authentication successful.")
             return response.json().get('access_token')
         else:
-            print(f"Auth request failed with status code {response.status_code}")
-            print("Response:", response.text)
+            logger.error(f"Auth request failed with status code {response.status_code}")
+            logger.error(f"Response: {response.text}")
             raise Exception("Failed to retrieve authentication token")
 
     def fetch_data(self, date: str, account: str) -> pd.DataFrame:
@@ -58,45 +68,45 @@ class AccrualsProcessor:
             'Accept': 'application/json'
         }
 
-        print(f"Requesting data for {date} and account {account} from API...")
+        logger.info(f"Requesting data for {date} and account {account} from API...")
         response = requests.post(self.DATA_URL, json=params, headers=headers, timeout=90)
 
         if response.ok:
-            print(f"Data retrieval successful for {date}, account {account}.")
+            logger.info(f"Data retrieval successful for {date}, account {account}.")
             raw_data = response.json()
             df = pd.json_normalize(raw_data)
             df["Upload_Date"] = datetime.today().strftime('%Y-%m-%d')
             df["Account"] = account  
             return df
         else:
-            print(f"Data request failed for {date}, account {account} with status code {response.status_code}")
-            print("Response:", response.text)
+            logger.error(f"Data request failed for {date}, account {account} with status code {response.status_code}")
+            logger.error(f"Response: {response.text}")
             raise Exception(f"Failed to retrieve data for {date}, account {account} (Status code: {response.status_code})")
 
     def save_data_to_excel(self, df: pd.DataFrame, date: str, account: str):
         output_path = f"C:\\Users\\stephan.ledesma\\Scripts\\Acrruals\\output\\NT_ACCRUALS_{account}_{date}.csv"
         df.to_csv(output_path, index=False)
-        print(f"Raw data for {date}, account {account} saved to {output_path}")
+        logger.info(f"Raw data for {date}, account {account} saved to {output_path}")
 
     def insert_data_into_snowflake(self, df: pd.DataFrame, date: str, account: str):
         try:
             tp.snow.insert(df, 'TR_TEST', 'NT', 'ACCRUALS', username='SLEDESMA', update_schema=True, warehouse='COMPUTE_WH')
-            print(f"Successfully inserted data for {date}, account {account} into Snowflake.")
+            logger.info(f"Successfully inserted data for {date}, account {account} into Snowflake.")
         except Exception as e:
-            print(f"Error inserting data into Snowflake for {date}, account {account}: {e}")
+            logger.error(f"Error inserting data into Snowflake for {date}, account {account}: {e}")
 
     def log_error_to_excel(self):
         if self.errors:
             error_df = pd.DataFrame(self.errors, columns=["Date", "Account", "Error"])
             error_df.to_csv(self.OUTPUT_ERROR_FILE, index=False)
-            print(f"Errors logged to {self.OUTPUT_ERROR_FILE}")
+            logger.info(f"Errors logged to {self.OUTPUT_ERROR_FILE}")
 
     def process_dates(self, accounts: list):
         one_year_ago = self.current_date - timedelta(days=1)
         date = self.current_date
 
         for account in accounts:
-            print(f"Processing data for account: {account}")
+            logger.info(f"Processing data for account: {account}")
             date = self.current_date  
 
             while date >= one_year_ago:
@@ -104,9 +114,9 @@ class AccrualsProcessor:
                 try:
                     df = self.fetch_data(date_str, account)
                     self.save_data_to_excel(df, date_str, account)
-                    self.insert_data_into_snowflake(df, date_str, account)
+                    #self.insert_data_into_snowflake(df, date_str, account)
                 except Exception as e:
-                    print(f"Error processing date {date_str}, account {account}: {e}")
+                    logger.error(f"Error processing date {date_str}, account {account}: {e}")
                     self.errors.append({"Date": date_str, "Account": account, "Error": str(e)})
 
                 date -= timedelta(days=1)
