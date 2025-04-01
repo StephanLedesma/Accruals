@@ -102,7 +102,7 @@ class AccrualsProcessor:
             logger.info(f"Errors logged to {self.OUTPUT_ERROR_FILE}")
 
     def process_dates(self, accounts: list):
-        one_year_ago = self.current_date - timedelta(days=1)
+        one_year_ago = self.current_date - timedelta(days=33)
         date = self.current_date
 
         for account in accounts:
@@ -114,7 +114,7 @@ class AccrualsProcessor:
                 try:
                     df = self.fetch_data(date_str, account)
                     self.save_data_to_excel(df, date_str, account)
-                    #self.insert_data_into_snowflake(df, date_str, account)
+                    self.insert_data_into_snowflake(df, date_str, account)
                 except Exception as e:
                     logger.error(f"Error processing date {date_str}, account {account}: {e}")
                     self.errors.append({"Date": date_str, "Account": account, "Error": str(e)})
@@ -124,6 +124,6 @@ class AccrualsProcessor:
         self.log_error_to_excel()
 
 if __name__ == "__main__":
-    ACCOUNTS_LIST = ["TIR34", "TIR32", "TIR29", "TIR20", "TIR16", "TIR28"]  
+    ACCOUNTS_LIST = [""]  
     processor = AccrualsProcessor()
     processor.process_dates(ACCOUNTS_LIST)
